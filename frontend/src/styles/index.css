@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 font-sans;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105;
+  }
+  
+  .btn-secondary {
+    @apply px-6 py-2 bg-white text-gray-800 border border-gray-200 font-semibold rounded-lg shadow hover:shadow-md transition-all duration-300 transform hover:scale-105;
+  }
+
+  .glass-card {
+    @apply bg-white bg-opacity-90 backdrop-blur-md rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300;
+  }
+}

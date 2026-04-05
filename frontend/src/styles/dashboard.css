@@ -1,0 +1,35 @@
+.dashboard-container {
+  @apply min-h-screen bg-gray-50 flex flex-col font-sans;
+}
+
+.dashboard-content {
+  @apply flex-grow container mx-auto px-4 py-8;
+}
+
+.stat-card {
+  @apply glass-card p-6 flex flex-col justify-center items-start relative overflow-hidden;
+}
+
+.stat-icon {
+  @apply absolute top-6 right-6 text-4xl opacity-20;
+}
+
+/* Custom Scrollbar for tables/dashboards */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+  border-radius: 4px;
+}
+ 
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1; 
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8; 
+}
