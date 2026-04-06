@@ -164,7 +164,8 @@ router.post('/logout', auth, async (req, res) => {
 const getVerificationBaseURL = () => {
     // Priority 1: Environment variable
     if (process.env.FRONTEND_URL) {
-        return `${process.env.FRONTEND_URL}/verify?id=`;
+        const cleanURL = process.env.FRONTEND_URL.replace(/\/+$/, '');
+        return `${cleanURL}/verify?id=`;
     }
     if (process.env.PUBLIC_IP) {
         return `http://${process.env.PUBLIC_IP}:3000/verify?id=`;
