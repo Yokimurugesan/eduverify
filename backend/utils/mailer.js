@@ -1,96 +1,109 @@
-const fs = require('fs');
-const path = require('path');
-
-// Helper to clean credentials
-const RESEND_API_KEY = (process.env.RESEND_API_KEY || "").trim();
-const EMAIL_USER = (process.env.EMAIL_USER || "").trim(); // Still used as a fallback sender or descriptive name
+const { google } = require('googleapis');
+const nodemailer = require('nodemailer');
 
 /**
- * Diagnostic utility to verify Resend API connectivity
+ * FINAL FIX: Gmail REST API (HTTPS)
+ * This uses existing Google OAuth2 credentials to bypass Render's SMTP block.
+ */
+
+const EMAIL_USER = (process.env.EMAIL_USER || "").trim();
+const GOOGLE_CLIENT_ID = (process.env.GOOGLE_CLIENT_ID || "").trim();
+const GOOGLE_CLIENT_SECRET = (process.env.GOOGLE_CLIENT_SECRET || "").trim();
+const GOOGLE_REFRESH_TOKEN = (process.env.GOOGLE_REFRESH_TOKEN || "").trim();
+const GOOGLE_REDIRECT_URI = (process.env.GOOGLE_REDIRECT_URI || "https://developers.google.com/oauthplayground").trim();
+
+// Setup OAuth2 Client
+const oauth2Client = new google.auth.OAuth2(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI
+);
+
+oauth2Client.setCredentials({
+    refresh_token: GOOGLE_REFRESH_TOKEN
+});
+
+const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+/**
+ * Diagnostic utility to verify Gmail API connectivity
  */
 async function verifyConnection() {
-    console.log("[Email Debug] Verifying Resend API connection...");
-    if (!RESEND_API_KEY) {
-        console.error("❌ Email Error: RESEND_API_KEY is missing in .env");
-        return false;
-    }
-    
+    console.log("[Email Debug] Verifying Gmail REST API connection...");
     try {
-        // Simple HEAD request or similar to check if the API is reachable
-        const response = await fetch('https://api.resend.com/emails', {
-            method: 'OPTIONS',
-            headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` }
-        });
-        
-        if (response.status === 204 || response.status === 200 || response.status === 405) {
-            console.log("✅ Success: Resend API is reachable via HTTPS.");
-            return true;
-        } else {
-            console.warn(`[Email Debug] Resend API responded with status: ${response.status}`);
-            return true; // Likely still okay, just not authenticated for OPTIONS
+        if (!GOOGLE_CLIENT_ID || !GOOGLE_REFRESH_TOKEN) {
+            console.error("❌ Email Error: Google OAuth2 credentials missing in .env");
+            return false;
         }
+
+        // Test by fetching a fresh token or basic profile info
+        const { token } = await oauth2Client.getAccessToken();
+        if (token) {
+            console.log("✅ Success: Gmail API is authenticated and ready via HTTPS.");
+            return true;
+        }
+        return false;
     } catch (err) {
-        console.error("❌ Email API unreachable:", err.message);
+        console.error("❌ Gmail API Auth Error:", err.message);
+        console.error("-> Hint: Your GOOGLE_REFRESH_TOKEN may be expired or invalid.");
         return false;
     }
 }
 
 /**
- * Send an email using the Resend API (HTTPS)
- * This bypasses Render's SMTP block entirely.
+ * Send an email via the Gmail REST API (HTTPS/Port 443)
+ * This uses nodemailer ONLY as a MIME generator.
  */
 async function sendEmail(to, subject, text, attachments = []) {
-    if (!RESEND_API_KEY) {
-        console.warn("Mailer Warning: RESEND_API_KEY not configured in .env");
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_REFRESH_TOKEN) {
+        console.warn("Mailer Warning: Google OAuth2 not configured in .env");
         return;
     }
 
     try {
-        // Prepare attachments for Resend API (convert paths to base64 content)
-        const processedAttachments = attachments.map(att => {
-            if (att.path && fs.existsSync(att.path)) {
-                const content = fs.readFileSync(att.path).toString('base64');
-                return {
-                    filename: att.filename,
-                    content: content
-                };
-            }
-            return att;
-        }).filter(att => att.content || att.path);
-
-        const payload = {
-            from: 'EduVerify <onboarding@resend.dev>', // Note: Until domain is verified, use Resend's onboarding email
-            to: Array.isArray(to) ? to : [to],
-            subject: subject,
-            text: text,
-            attachments: processedAttachments
-        };
-
-        const response = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${RESEND_API_KEY}`
-            },
-            body: JSON.stringify(payload)
+        // 1. Generate the raw MIME message using nodemailer (robust and handles attachments)
+        const transporter = nodemailer.createTransport({
+            // We don't use this for sending, just for the internal 'envelope' and 'message' logic
+            jsonTransport: true 
         });
 
-        const result = await response.json();
+        const mailOptions = {
+            from: EMAIL_USER,
+            to,
+            subject,
+            text,
+            attachments
+        };
 
-        if (response.ok) {
-            console.log(`Email successfully sent to ${to} via Resend. ID: ${result.id}`);
-        } else {
-            console.error(`Resend API Error [To: ${to}]:`, result.message || JSON.stringify(result));
-            if (result.message && result.message.includes('onboarding')) {
-                console.error("-> Hint: On the free Resend tier, you can only send emails to YOURSELF until you verify a domain.");
-            }
-        }
+        // We use a dummy nodemailer smtp pool just for building the raw MIME
+        const dummyTransporter = nodemailer.createTransport({
+            streamTransport: true,
+            newline: 'unix',
+            buffer: true
+        });
+
+        const { message } = await dummyTransporter.sendMail(mailOptions);
+        
+        // 2. Base64 Safe Encode the MIME message for the Gmail API
+        const raw = Buffer.from(message)
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+
+        // 3. Send via the Gmail REST API (HTTPS - No SMTP ports involved!)
+        const res = await gmail.users.messages.send({
+            userId: 'me',
+            requestBody: { raw }
+        });
+
+        console.log(`Email successfully sent to ${to} via Gmail API. ID: ${res.data.id}`);
     } catch (err) {
-        console.error(`Email Failure (API) [To: ${to}]:`, err.message);
+        console.error(`Email Failure (Gmail API) [To: ${to}]:`, err.message);
     }
 }
 
-// Initial verification
+// Initial verification on load
 verifyConnection();
 
 module.exports = { sendEmail, verifyConnection };
