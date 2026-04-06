@@ -21,7 +21,7 @@ const { PDFDocument, rgb } = require('pdf-lib');
 const os = require('os');
 const sharp = require('sharp');
 
-const sendEmail = require('../utils/mailer');
+const { sendEmail } = require('../utils/mailer');
 const { extractTextFromImage, extractTextFromPDF, parseExtractedText, cgpaOnlyPrompt } = require('../utils/ocrService');
 const { generateFormLink } = require('../utils/googleFormService');
 const { stampDocument } = require('../utils/stampingService');
