@@ -124,7 +124,7 @@ app.use('/api', userRoutes);
 app.use(express.static(path.join(__dirname, '../frontend/build')));
 
 // Catch-all route to serve the React app for any other request
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
 });
 
