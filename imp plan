@@ -1,0 +1,57 @@
+# Render Deployment Implementation Plan
+
+This plan outlines the exact steps to transition your local project to a live production environment on Render. We will use a **Separated Architecture** (Backend as a Web Service, Frontend as a Static Site) which is the most reliable way to deploy React + Node apps on Render.
+
+## User Review Required
+
+> [!IMPORTANT]
+> - **MongoDB**: You MUST create a free account on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) and get a connection string. Local MongoDB won't work on Render.
+> - **Environment Variables**: You will need to manually copy each key from your `.env` file into the Render dashboard during setup.
+
+## Proposed Changes
+
+### 1. Frontend Configuration
+We need to make the API URL flexible so it can point to your real backend URL on Render.
+
+#### [MODIFY] [apiConfig.js](file:///c:/Users/YOGESWARI/Downloads/eduverify2/frontend/src/apiConfig.js)
+- Update to use `process.env.REACT_APP_API_URL` as the primary source.
+- Fallback to localhost for local development.
+
+### 2. Backend Configuration
+Ensure the backend is ready for production traffic.
+
+#### [MODIFY] [index.js](file:///c:/Users/YOGESWARI/Downloads/eduverify2/backend/index.js)
+- Confirm CORS allows requests from your future Render Frontend URL.
+
+---
+
+## Deployment Steps on Render
+
+### Step 1: Deploy Backend (Web Service)
+1. **Connect Repository**: Choose your GitHub repo.
+2. **Build Settings**:
+   - Runtime: `Node`
+   - Build Command: `npm install` (in your backend folder)
+   - Start Command: `node index.js`
+3. **Environment Variables**: Add all keys from your `.env` (MONGO_URI, JWT_SECRET, etc.).
+
+### Step 2: Deploy Frontend (Static Site)
+1. **Connect Repository**: Choose the same GitHub repo.
+2. **Build Settings**:
+   - Build Command: `npm run build` (in your frontend folder)
+   - Publish Directory: `build`
+3. **Environment Variables**:
+   - Add `REACT_APP_API_URL` = (Your Render Backend URL) + `/api`
+
+---
+
+## Open Questions
+
+1. Do you already have a **MongoDB Atlas** connection string?
+2. Are you planning to keep the Frontend and Backend in the same GitHub repository, or separate ones?
+
+## Verification Plan
+
+### Automated Tests
+- Once deployed, I will use the browser tool to ping your backend's `/api/health-check` to confirm it's online.
+- I will verify the Frontend login page loads correctly.

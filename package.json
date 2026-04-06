@@ -1,0 +1,9 @@
+{
+  "name": "eduverify-monolithic",
+  "version": "1.0.0",
+  "description": "Unified Frontend and Backend Server",
+  "scripts": {
+    "postinstall": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
+    "start": "node backend/index.js"
+  }
+}
