@@ -162,12 +162,15 @@ async function verifySingleResponse(data, shouldSendEmail = true, dryRun = false
                 await extractedEntry.save();
             }
             
-            if (!dryRun && doc.status === 'pending') {
+            if (!dryRun && (doc.status === 'pending' || doc.status === 'verified')) {
                 doc.status = "rejected";
                 let reason = "";
                 if (!cgpaMatch) reason += `CGPA mismatch: Student entered ${studentCgpa}, but OCR extracted ${ocrCgpa}. `;
                 if (!semesterMatch) reason += `Semester mismatch: Student entered ${formSemester}, but OCR extracted ${ocrSemester}. `;
                 doc.rejectionReason = reason.trim();
+                // Optionally clear verification/QR fields if downgrading
+                doc.qrCode = null;
+                doc.verificationURL = null;
                 await doc.save();
             }
 
@@ -251,15 +254,8 @@ router.post('/sync-responses', auth, async (req, res) => {
             if (dryRunResult.docId) {
                 const groupKey = dryRunResult.docId.toString();
                 
-                if (!entryGroups.has(groupKey)) {
-                    entryGroups.set(groupKey, { result: dryRunResult, rowData });
-                } else {
-                    const existing = entryGroups.get(groupKey);
-                    // Prioritize "verified" result over "mismatch"
-                    if (dryRunResult.status === "verified" && existing.result.status !== "verified") {
-                        entryGroups.set(groupKey, { result: dryRunResult, rowData });
-                    }
-                }
+                // Always overwrite with the newest row, so chronological latest wins.
+                entryGroups.set(groupKey, { result: dryRunResult, rowData });
             }
         }
 
