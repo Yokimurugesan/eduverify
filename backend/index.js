@@ -12,7 +12,11 @@ console.log("🚀 [EduVerify] Booting with Direct Comparison Routes enabled...")
 const app = express();
 
 // ✅ Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+}));
 app.use(express.json());
 // app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // DISABLING PUBLIC ACCESS FOR SECURITY
 
@@ -115,10 +119,15 @@ const formRoutes = require('./routes/formRoutes');
 app.use('/api/forms', formRoutes);
 app.use('/api', userRoutes);
 
-// ✅ Default route
-app.get('/', (req, res) => {
-    res.send("Server running on http://localhost:" + process.env.PORT);
+// ================== SERVE FRONTEND (PRODUCTION) ==================
+// Serve frontend static files from the build folder
+app.use(express.static(path.join(__dirname, '../frontend/build')));
+
+// Catch-all route to serve the React app for any other request
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
 });
+
 
 // ================== START SERVER ==================
 async function startServer() {

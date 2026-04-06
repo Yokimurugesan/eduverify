@@ -236,6 +236,15 @@ router.post('/sync-responses', auth, async (req, res) => {
             const [timestamp, formName, formRollNo, formEmail, formCgpa, formSemester, formDocId] = row;
             if (!formEmail) continue;
 
+            const rowData = {
+                formName,
+                formEmail,
+                formRollNo,
+                formCgpa,
+                formSemester,
+                formDocId
+            };
+
             // Pass 1: DRY RUN to identify the best result without modifying DB/sending email
             const dryRunResult = await verifySingleResponse(rowData, false, true);
             
@@ -246,8 +255,8 @@ router.post('/sync-responses', auth, async (req, res) => {
                     entryGroups.set(groupKey, { result: dryRunResult, rowData });
                 } else {
                     const existing = entryGroups.get(groupKey);
-                    // Prioritize "verified" result
-                    if (dryRunResult.status === "verified") {
+                    // Prioritize "verified" result over "mismatch"
+                    if (dryRunResult.status === "verified" && existing.result.status !== "verified") {
                         entryGroups.set(groupKey, { result: dryRunResult, rowData });
                     }
                 }
