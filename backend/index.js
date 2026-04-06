@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path'); // Added for path.join
-require('dotenv').config(); // Load .env variables
+require('dotenv').config({ path: path.join(__dirname, '.env') }); // Load .env variables from backend dir
 const Document = require('./models/Document');
 const auth = require('./middleware/auth');
 const ExtractedData = require('./models/ExtractedData');
