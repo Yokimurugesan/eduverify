@@ -936,6 +936,7 @@ router.post('/admin/upload-reference', auth, upload.single('file'), async (req, 
         // ===== OCR: Fetch ONLY CGPA (Admin manually types the name) =====
         let extractedName = studentName || null;
         let extractedCgpa = cgpa || null;
+        let extractedSemesterWiseData = [];
         
         // Only run OCR for CGPA if missing. We NO LONGER auto-extract names for references.
         if (!extractedCgpa) {
@@ -946,13 +947,13 @@ router.post('/admin/upload-reference', auth, upload.single('file'), async (req, 
                 let parsed = { name: null, cgpa: null };
                 const mimetype = req.file.mimetype;
                 if (mimetype === "application/pdf") {
-                    parsed = await extractTextFromPDF(filePath, extractionPrompt);
+                    parsed = await extractTextFromPDF(filePath, cgpaOnlyPrompt);
                 } else if (mimetype.startsWith("image/")) {
-                    parsed = await extractTextFromImage(filePath, extractionPrompt);
+                    parsed = await extractTextFromImage(filePath, cgpaOnlyPrompt);
                 }
                 extractedCgpa = parsed.cgpa;
-                const semesterWiseData = parsed.semesterWiseDetails || [];
-                console.log(`[Admin Ref Upload] OCR Result: CGPA=${extractedCgpa}, Semesters=${semesterWiseData.length}`);
+                extractedSemesterWiseData = parsed.semesterWiseDetails || [];
+                console.log(`[Admin Ref Upload] OCR Result: CGPA=${extractedCgpa}, Semesters=${extractedSemesterWiseData.length}`);
             } catch (ocrErr) {
                 console.error("[Admin Ref Upload] OCR failed:", ocrErr.message);
             }
@@ -968,7 +969,7 @@ router.post('/admin/upload-reference', auth, upload.single('file'), async (req, 
             studentName: extractedName || "Unknown",
             studentEmail,
             cgpa: extractedCgpa,
-            semesterWiseData: semesterWiseData || []
+            semesterWiseData: extractedSemesterWiseData || []
         });
 
         await refDoc.save();
