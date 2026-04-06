@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
 
 // Helper to clean credentials
 const EMAIL_USER = (process.env.EMAIL_USER || "").trim();
@@ -9,7 +10,10 @@ const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
     secure: true, // Use SSL
-    family: 4, // Force IPv4 routing (fixes ENETUNREACH IPv6 error on Render)
+    // Force IPv4 lookup directly in DNS resolution (fixes ENETUNREACH IPv6 error on Render)
+    lookup: (hostname, options, callback) => {
+        dns.lookup(hostname, { family: 4 }, callback);
+    },
     auth: {
         user: EMAIL_USER,
         pass: EMAIL_PASS
