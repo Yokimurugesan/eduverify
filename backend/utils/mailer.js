@@ -8,8 +8,8 @@ const EMAIL_PASS = (process.env.EMAIL_PASS || "").replace(/\s+/g, '');
 // Create transporter using Gmail with robust settings
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // Use SSL
+    port: 587,
+    secure: false, // true for 465, false for 587 (uses STARTTLS)
     // Force IPv4 lookup directly in DNS resolution (fixes ENETUNREACH IPv6 error on Render)
     lookup: (hostname, options, callback) => {
         dns.lookup(hostname, { family: 4 }, callback);
@@ -18,10 +18,10 @@ const transporter = nodemailer.createTransport({
         user: EMAIL_USER,
         pass: EMAIL_PASS
     },
-    // Add timeouts to prevent hanging
-    connectionTimeout: 10000, 
-    greetingTimeout: 10000,
-    socketTimeout: 10000
+    // Increased timeouts to prevent hanging or premature timeouts on slow networks
+    connectionTimeout: 60000, 
+    greetingTimeout: 60000,
+    socketTimeout: 60000
 });
 
 // Function to send email
